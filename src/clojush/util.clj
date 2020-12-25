@@ -10,19 +10,15 @@
 
 (def literals
   (atom
-    {:integer integer?
-     :float float?
-     :char char?
-     :string string?
-     :boolean (fn [thing] (or (= thing true) (= thing false)))
-     :vector_integer (fn [thing] (and (vector? thing) (integer? (first thing))))
-     :vector_float (fn [thing] (and (vector? thing) (float? (first thing))))
-     :vector_string (fn [thing] (and (vector? thing) (string? (first thing))))
-     :vector_boolean (fn [thing] (and (vector? thing) (or (= (first thing) true) (= (first thing) false))))
-     :vector_vector_integer (fn [thing] (and (vector? thing) (vector? (first thing)) (integer? (first (flatten thing)))))
-     :vector_vector_float (fn [thing] (and (vector? thing) (vector? (first thing)) (float? (first (flatten thing)))))
-     :vector_vector_string (fn [thing] (and (vector? thing) (vector? (first thing)) (string? (first (flatten thing)))))
-     :vector_vector_boolean (fn [thing] (and (vector? thing) (vector? (first thing)) (or (= (first (flatten thing)) true) (= (first (flatten thing)) false))))}))
+   {:integer integer?
+    :float float?
+    :char char?
+    :string string?
+    :boolean (fn [thing] (or (= thing true) (= thing false)))
+    :vector_integer (fn [thing] (and (vector? thing) (integer? (first thing))))
+    :vector_float (fn [thing] (and (vector? thing) (float? (first thing))))
+    :vector_string (fn [thing] (and (vector? thing) (string? (first thing))))
+    :vector_boolean (fn [thing] (and (vector? thing) (or (= (first thing) true) (= (first thing) false))))}))
 
 (defn recognize-literal
   "If thing is a literal, return its type -- otherwise return false."
@@ -30,7 +26,7 @@
   (loop [m (seq @literals)]
     (if-let [[type pred] (first m)]
       (if (pred thing) type
-        (recur (rest m)))
+          (recur (rest m)))
       nil)))
 
 ;; Add new literals by just assoc'ing on the new predicate. e.g.:
@@ -43,9 +39,9 @@
   {:added "1.0"}
   [root]
   (zip/zipper seq?
-          seq
-          (fn [node children] (with-meta children (meta node)))
-          root))
+              seq
+              (fn [node children] (with-meta children (meta node)))
+              root))
 
 (defn list-concat
   "Returns a (non-lazy) list of the items that result from calling concat
@@ -85,6 +81,9 @@
       :else n)
     :else
     (cond
+      (Double/isNaN n) 0.0
+      (= n Double/POSITIVE_INFINITY) (* 1.0 max-number-magnitude)
+      (= n Double/NEGATIVE_INFINITY) (* 1.0 (- max-number-magnitude))
       (> n max-number-magnitude) (* 1.0 max-number-magnitude)
       (< n (- max-number-magnitude)) (* 1.0 (- max-number-magnitude))
       (and (< n min-number-magnitude) (> n (- min-number-magnitude))) 0.0
@@ -105,7 +104,7 @@
          total 0]
     (cond (not (seq? remaining))
           total
-          ;;
+          ;; 
           (empty? remaining)
           (inc total)
           ;;
@@ -119,14 +118,14 @@
                  (inc total)))))
 
 (defn count-points
-  "Returns the number of points in tree, where each atom and each pair of parentheses
+  "Returns the number of points in tree, where each atom and each pair of parentheses 
    counts as a point."
   [tree]
   (loop [remaining tree
          total 0]
     (cond (not (seq? remaining))
           (inc total)
-          ;;
+          ;; 
           (empty? remaining)
           (inc total)
           ;;
@@ -138,6 +137,23 @@
           (recur (list-concat (first remaining)
                               (rest remaining))
                  (inc total)))))
+
+(defn height-of-nested-list
+  "Returns the height of the nested list called tree.
+  Borrowed idea from here: https://stackoverflow.com/a/36865180/2023312
+  Works by looking at the path from each node in the tree to the root, and
+  finding the longest one.
+  Note: does not treat an empty list as having any height."
+  [tree]
+  (loop [zipper (seq-zip tree)
+         height 0]
+    (if (zip/end? zipper)
+      height
+      (recur (zip/next zipper)
+             (-> zipper
+                 zip/path
+                 count
+                 (max height))))))
 
 (defn code-at-point
   "Returns a subtree of tree indexed by point-index in a depth first traversal."
@@ -181,7 +197,7 @@
 
 ; Note: Well, I (Tom) think I figured out why truncate was there. When I tried running
 ; the change problem, it threw an exception trying to cast into an int a number
-; that was too big. Maybe there's a different principled way to use casting, but
+; that was too big. Maybe there's a different principled way to use casting, but 
 ; I'm just going to add truncate back for now!
 (defn truncate
   "Returns a truncated integer version of n."
@@ -217,7 +233,7 @@
   (postwalklist (fn [x] (if (contains? smap x) (smap x) x)) form))
 
 (defn subst
-  "Returns the given list but with all instances of that (at any depth)
+  "Returns the given list but with all instances of that (at any depth)                                   
    replaced with this. Read as 'subst this for that in list'. "
   [this that lst]
   (postwalklist-replace {that this} lst))
@@ -227,8 +243,8 @@
    functional implementation."
   [tree subtree]
   (or
-    (= tree subtree)
-    (not (= tree (subst (gensym) subtree tree)))))
+   (= tree subtree)
+   (not (= tree (subst (gensym) subtree tree)))))
 
 (defn containing-subtree
   "If tree contains subtree at any level then this returns the smallest
@@ -299,24 +315,24 @@
    cases."
   [domains]
   (vec
-    (apply
-      mapv
-      concat
-      (map (fn [[input-set n-train n-test]]
-             (if (fn? input-set)
-               (vector (repeatedly n-train input-set)
-                       (repeatedly n-test input-set))
-               (let [shuffled-inputs (shuffle input-set)
-                     train-inputs (if (= n-train (count input-set))
-                                    input-set ; NOTE: input-set is not shuffled if the same size as n-train
-                                    (take n-train shuffled-inputs))
-                     test-inputs (if (= n-test (count input-set))
-                                   input-set ; NOTE: input-set is not shuffled if the same size as n-test
-                                   (drop n-train shuffled-inputs))]
-                 (assert (= (+ n-train n-test) (count input-set))
-                         "Sizes of train and test sets don't add up to the size of the input set.")
-                 (vector train-inputs test-inputs))))
-           domains))))
+   (apply
+    mapv
+    concat
+    (map (fn [[input-set n-train n-test]]
+           (if (fn? input-set)
+             (vector (repeatedly n-train input-set)
+                     (repeatedly n-test input-set))
+             (let [shuffled-inputs (shuffle input-set)
+                   train-inputs (if (= n-train (count input-set))
+                                  input-set ; NOTE: input-set is not shuffled if the same size as n-train
+                                  (take n-train shuffled-inputs))
+                   test-inputs (if (= n-test (count input-set))
+                                 input-set ; NOTE: input-set is not shuffled if the same size as n-test
+                                 (drop n-train shuffled-inputs))]
+               (assert (= (+ n-train n-test) (count input-set))
+                       "Sizes of train and test sets don't add up to the size of the input set.")
+               (vector train-inputs test-inputs))))
+         domains))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; from https://github.com/KushalP/mailcheck-clj/blob/master/src/mailcheck/levenshtein.clj
@@ -325,12 +341,12 @@
   "computes the next row using the prev-row current-element and the other seq"
   [prev-row current-element other-seq pred]
   (reduce
-    (fn [row [diagonal above other-element]]
-      (let [update-val (if (pred other-element current-element)
+   (fn [row [diagonal above other-element]]
+     (let [update-val (if (pred other-element current-element)
                          ;; if the elements are deemed equivalent according to the predicate
                          ;; pred, then no change has taken place to the string, so we are
                          ;; going to set it the same value as diagonal (which is the previous edit-distance)
-                         diagonal
+                        diagonal
                          ;; in the case where the elements are not considered equivalent, then we are going
                          ;; to figure out if its a substitution (then there is a change of 1 from the previous
                          ;; edit distance) thus the value is diagonal + 1 or if its a deletion, then the value
@@ -338,18 +354,18 @@
                          ;; of last of row + 1 (since we will be using vectors, peek is more efficient)
                          ;; or it could be a case of insertion, then the value is above+1, and we chose
                          ;; the minimum of the three
-                         (inc (min diagonal above (peek row))))]
+                        (inc (min diagonal above (peek row))))]
 
-        (conj row update-val)))
+       (conj row update-val)))
     ;; we need to initialize the reduce function with the value of a row, since we are
     ;; constructing this row from the previous one, the row is a vector of 1 element which
     ;; consists of 1 + the first element in the previous row (edit distance between the prefix so far
     ;; and an empty string)
-    [(inc (first prev-row))]
+   [(inc (first prev-row))]
     ;; for the reduction to go over, we need to provide it with three values, the diagonal
     ;; which is the same as prev-row because it starts from 0, the above, which is the next element
     ;; from the list and finally the element from the other sequence itself.
-    (map vector prev-row (next prev-row) other-seq)))
+   (map vector prev-row (next prev-row) other-seq)))
 
 (defn levenshtein-distance
   "Levenshtein Distance - http://en.wikipedia.org/wiki/Levenshtein_distance
@@ -363,16 +379,16 @@
     (empty? a) (count b)
     (empty? b) (count a)
     :else (peek
-            (reduce
+           (reduce
               ;; we use a simple reduction to convert the previous row into the next-row  using the
               ;; compute-next-row which takes a current element, the previous-row computed so far
               ;; and the predicate to compare for equality.
-              (fn [prev-row current-element]
-                (compute-next-row prev-row current-element b p))
+            (fn [prev-row current-element]
+              (compute-next-row prev-row current-element b p))
               ;; we need to initialize the prev-row with the edit distance between the various prefixes of
               ;; b and the empty string.
-              (range (inc (count b)))
-              a))))
+            (range (inc (count b)))
+            a))))
 
 (defn sequence-similarity
   [sequence1 sequence2]
@@ -390,7 +406,7 @@
   "Calculates the Hamming distance between two sequences, including strings"
   [seq1 seq2]
   (apply + (map #(if (= %1 %2) 0 1)
-                  seq1 seq2)))
+                seq1 seq2)))
 
 ;;;;;;;;;;;;;;:::::;;;;;;;;;;;;;;
 ;; Simple Statistic Functions
@@ -420,4 +436,33 @@
       (let [bottom (dec halfway)
             bottom-val (nth sorted bottom)
             top-val (nth sorted halfway)]
-           (mean [bottom-val top-val])))))
+        (mean [bottom-val top-val])))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Function to produce proportional input and constant instructions
+
+(defn concatenate-until-threshold
+  "Utility function for make-proportional-atom-generators.
+   This repeatedly concatenates coll with itself until
+   it has at least threshold elements in it."
+  [coll threshold]
+  (loop [things coll]
+    (if (>= (count things) threshold)
+      things
+      (recur (concat things coll)))))
+
+(defn make-proportional-atom-generators
+  "Takes lists of one-each-instructions, inputs, and constants,
+   and the proportions of inputs and constants in the final set
+   as a map, and produces the final list of atom generators."
+  [one-each-instructions inputs constants
+   {:keys [proportion-inputs proportion-constants]}]
+  (let [original-instruction-count (count one-each-instructions)
+        proportional-increase (+ proportion-inputs proportion-constants)
+        final-instruction-count (/ original-instruction-count
+                                   (- 1.0 proportional-increase))
+        number-inputs (int (* proportion-inputs final-instruction-count))
+        number-constants (int (* proportion-constants final-instruction-count))
+        inputs-final (concatenate-until-threshold inputs number-inputs)
+        constants-final (concatenate-until-threshold constants number-constants)]
+    (concat one-each-instructions inputs-final constants-final)))
