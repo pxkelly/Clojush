@@ -2,31 +2,31 @@
 ;; Peter Kelly, pxkelly@hamilton.edu
 ;;
 
-(ns clojush.problems.software.vector-distance
+(ns clojush.problems.software.benchmarks-v2.vector-distance
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag
-        [clojure.math numeric-tower]
-        ))
+        [clojure.math numeric-tower]))
 
 ; Atom generators
 (def vector-distance-atom-generators
-  (concat (list
-            ;;; end constants
-            ;;; end ERCs
-            (tag-instruction-erc [:integer :boolean :exec :float :vector_float] 1000)
-            (tagged-instruction-erc 1000)
-            ;;; end tag ERCs
-            'in1
-            'in2
-            ;;; end input instructions
-            )
-          (registered-for-stacks [:integer :boolean :exec :float :vector_float])))
+  (make-proportional-atom-generators
+   (concat
+    (registered-for-stacks [:integer :boolean :exec :float :vector_float])
+    (list (tag-instruction-erc [:integer :boolean :exec :float :vector_float] 1000) ; tags
+          (tagged-instruction-erc 1000)))
+   (list 'in1
+         'in2) ; inputs
+   (list []
+         0) ; constants
+   {:proportion-inputs 0.15
+    :proportion-constants 0.05}))
 
 (defn vector-distance-input
   "Makes a Vector Distance input vector of length len."
   [len]
-  (vector (vec (repeatedly len #(- (* (rand) 200) 100))) (vec (repeatedly len #(- (* (rand) 200) 100)))))
+  (vector (vec (repeatedly len #(- (* (rand) 200) 100)))
+          (vec (repeatedly len #(- (* (rand) 200) 100)))))
 
 ;; A list of data domains for the problem. Each domain is a vector containing
 ;; a "set" of inputs and two integers representing how many cases from the set
@@ -47,8 +47,7 @@
    [(fn [] (vector-distance-input 3)) 30 300] ; Size 3 inputs
    [(fn [] (vector-distance-input 4)) 20 200] ; Size 4 inputs
    [(fn [] (vector-distance-input 5)) 10 100] ; Size 5 inputs
-   [(fn [] (vector-distance-input (+ (lrand-int 15) 6))) 100 1050]
-   ])
+   [(fn [] (vector-distance-input (+ (lrand-int 15) 6))) 100 1050]])
 
 ;;Can make Vector Distance test data like this:
 ;(test-and-train-data-from-domains vector-distance-data-domains)
@@ -65,51 +64,50 @@
   [inputs]
   (map (fn [[in1 in2]]
          (vector [in1 in2]
-           (sqrt (reduce + (map euclidean-distance in1 in2)))))
+                 (sqrt (reduce + (map euclidean-distance in1 in2)))))
        inputs))
 
 (defn make-vector-distance-error-function-from-cases
   [train-cases test-cases]
   (fn the-actual-vector-distance-error-function
     ([individual]
-      (the-actual-vector-distance-error-function individual :train))
+     (the-actual-vector-distance-error-function individual :train))
     ([individual data-cases] ;; data-cases should be :train or :test
      (the-actual-vector-distance-error-function individual data-cases false))
     ([individual data-cases print-outputs]
-      (let [behavior (atom '())
-            errors (doall
-                     (for [[[input1 input2] correct-output] (case data-cases
-                                                                   :train train-cases
-                                                                   :test test-cases
-                                                                   [])]
-                       (let [final-state (run-push (:program individual)
-                                                   (->> (make-push-state)
-                                                   (push-item input2 :input)
-                                                   (push-item input1 :input)))
-                             result (top-item :float final-state)]
-                             (when print-outputs
-                               (let [res-str (if (float? result)
-                                               (format "%.3f" result)
-                                               (str result))]
-                                 (println (format "Correct output: %.3f | Program output: %s" (float correct-output) res-str))))
+     (let [behavior (atom '())
+           errors (doall
+                   (for [[[input1 input2] correct-output] (case data-cases
+                                                            :train train-cases
+                                                            :test test-cases
+                                                            [])]
+                     (let [final-state (run-push (:program individual)
+                                                 (->> (make-push-state)
+                                                      (push-item input2 :input)
+                                                      (push-item input1 :input)))
+                           result (top-item :float final-state)]
+                       (when print-outputs
+                         (let [res-str (if (float? result)
+                                         (format "%.3f" result)
+                                         (str result))]
+                           (println (format "Correct output: %.3f | Program output: %s" (float correct-output) res-str))))
                          ; Record the behavior
-                         (swap! behavior conj result)
+                       (swap! behavior conj result)
                          ; Error is float error rounded to 3 decimal places
-                         (round-to-n-decimal-places
-                          (if (number? result)
-                            (abs (- result correct-output)) ; distance from correct integer
-                            1000000.0) ; penalty for no return value
-                          3)
-                           )))]
-        (if (= data-cases :train)
-          (assoc individual :behaviors @behavior :errors errors)
-          (assoc individual :test-errors errors))))))
+                       (round-to-n-decimal-places
+                        (if (number? result)
+                          (abs (- result correct-output)) ; distance from correct integer
+                          1000000.0) ; penalty for no return value
+                        3))))]
+       (if (= data-cases :train)
+         (assoc individual :behaviors @behavior :errors errors)
+         (assoc individual :test-errors errors))))))
 
 (defn get-vector-distance-train-and-test
   "Returns the train and test cases."
   [data-domains]
   (map vector-distance-test-cases
-      (test-and-train-data-from-domains data-domains)))
+       (test-and-train-data-from-domains data-domains)))
 
 ; Define train and test cases
 (def vector-distance-train-and-test-cases
@@ -130,7 +128,7 @@
   (let [best-test-errors (:test-errors (error-function best :test))
         best-total-test-error (apply +' best-test-errors)]
     (println ";;******************************")
-    (printf ";; -*- Vector Distance problem report - generation %s\n" generation)(flush)
+    (printf ";; -*- Vector Distance problem report - generation %s\n" generation) (flush)
     (println "Test total error for best:" best-total-test-error)
     (println (format "Test mean error for best: %.5f" (double (/ best-total-test-error (count best-test-errors)))))
     (when (zero? (:total-error best))
@@ -141,8 +139,7 @@
     (println ";;------------------------------")
     (println "Outputs of best individual on training cases:")
     (error-function best :train true)
-    (println ";;******************************")
-    )) ;; To do validation, could have this function return an altered best individual
+    (println ";;******************************"))) ;; To do validation, could have this function return an altered best individual
        ;; with total-error > 0 if it had error of zero on train but not on validation
        ;; set. Would need a third category of data cases, or a defined split of training cases.
 
@@ -152,8 +149,8 @@
   {:error-function (make-vector-distance-error-function-from-cases (first vector-distance-train-and-test-cases)
                                                                    (second vector-distance-train-and-test-cases))
    :atom-generators vector-distance-atom-generators
-   :max-points 1600
-   :max-genome-size-in-initial-program 200
+   :max-points 2000
+   :max-genome-size-in-initial-program 250
    :evalpush-limit 2000
    :population-size 1000
    :max-generations 300
@@ -161,8 +158,7 @@
    :genetic-operator-probabilities {:alternation 0.2
                                     :uniform-mutation 0.2
                                     :uniform-close-mutation 0.1
-                                    [:alternation :uniform-mutation] 0.5
-                                    }
+                                    [:alternation :uniform-mutation] 0.5}
    :alternation-rate 0.01
    :alignment-deviation 10
    :uniform-mutation-rate 0.01
@@ -170,5 +166,4 @@
    :problem-specific-initial-report vector-distance-initial-report
    :report-simplifications 0
    :final-report-simplifications 5000
-   :max-error 1000000.0
-   })
+   :max-error 1000000.0})

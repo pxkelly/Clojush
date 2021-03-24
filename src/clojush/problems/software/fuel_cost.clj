@@ -1,87 +1,93 @@
-;; luhn.clj
-;; Peter Kelly, pxkelly@hamilton.edu
+;; fuel_cost.clj
+;; Tom Helmuth, thelmuth@hamilton.edu
 ;;
+;; Problem inspired by: https://adventofcode.com/2019/day/1
 
-(ns clojush.problems.software.benchmarks-v2.luhn
+(ns clojush.problems.software.benchmarks-v2.fuel-cost
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
-        clojush.instructions.tag
-        [clojure.math numeric-tower]))
+        clojush.instructions.tag)
+  (:require [clojure.math.numeric-tower :as nt]))
 
 ; Atom generators
-(def luhn-atom-generators
+(def atom-generators
   (make-proportional-atom-generators
    (concat
-    (registered-for-stacks [:integer :boolean :exec :vector_integer])
-    (list (tag-instruction-erc [:integer :boolean :exec :vector_integer] 1000) ; tags
+    (registered-for-stacks [:integer :vector_integer :boolean :exec])
+    (list (tag-instruction-erc [:integer :vector_integer :boolean :exec] 1000) ; tags
           (tagged-instruction-erc 1000)))
    (list 'in1) ; inputs
    (list 0
+         1
          2
-         9
-         10
-         (fn [] (- (lrand-int 21) 10)) ; integer ERC [-10, 10]
+         3
+         (fn [] (- (lrand-int 2001) 1000)) ;Integer ERC
 ) ; constants
    {:proportion-inputs 0.15
     :proportion-constants 0.05}))
 
+(defn fuel-cost-input
+  "Creates a vector of length len of integers in the range [6, 10000]"
+  [len]
+  (vec (repeatedly len #(+ 6 (lrand-int 9995)))))
 
-;; A list of data domains for the problem. Each domain is a vector containing
+;; A list of data domains. Each domain is a vector containing
 ;; a "set" of inputs and two integers representing how many cases from the set
 ;; should be used as training and testing cases respectively. Each "set" of
 ;; inputs is either a list or a function that, when called, will create a
 ;; random element of the set.
-(def luhn-data-domains
-  [[(list
-     [0 1 2 3 4 5 6 7 8 9 8 7 6 5 4 3]
-     [9 9 9 9 9 9 9 9 9 9 9 9 9 9 9 9]
-     [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-     [5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5]
-     [4 4 4 4 4 4 4 4 4 4 4 4 4 4 4 4]
-     [1 0 2 0 4 3 2 1 0 4 1 2 3 4 2 1]
-     [0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0]
-     [2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-     [0 0 0 0 0 0 0 0 0 0 0 0 0 0 3 0]
-     [0 0 0 0 0 0 0 0 4 0 0 0 0 0 0 0]
-     [0 0 0 0 0 5 0 0 0 0 0 0 0 0 0 0]
-     [0 6 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-     [0 0 0 0 0 0 0 0 0 0 0 0 7 0 0 0]
-     [0 0 0 0 0 0 0 0 0 0 8 0 0 0 0 0]
-     [0 0 9 0 0 0 0 0 0 0 0 0 0 0 0 0]
-     [8 0 0 0 0 6 0 0 0 0 9 0 0 0 0 0]
-     [0 0 2 0 0 0 4 0 0 0 0 0 1 0 0 0]
-     [0 5 0 5 0 5 0 5 0 5 0 5 0 5 0 5]
-     [9 9 8 7 6 6 7 8 9 9 8 7 6 5 5 6]
-     [0 0 0 0 0 7 0 0 0 3 0 0 0 0 0 0]) 20 0]
-   [(fn [] (vec (repeatedly 16 #(rand-int 10)))) 180 2000]])
+(def data-domains
+  [[(list [6] [7] [8] [9] [10] [11] [12] [13] [14] [15] [16] [17]
+          [9998] [9999] [10000]) 15 0] ; length-1 vectors
+   [(list [6 6]
+          [9 14]
+          [9 15]
+          [14 9]
+          [15 9]
+          [32 32]
+          [33 33]
+          [10000 9]
+          [9 10000]
+          [10000 10000]) 10 0] ; length-2 vectors
+   [(list (vec (repeat 20 6))
+          (vec (repeat 20 7))
+          (vec (repeat 20 8))
+          (vec (repeat 20 9))
+          (vec (repeat 20 10))
+          (vec (repeat 20 11))
+          (vec (repeat 20 12))
+          (vec (repeat 20 13))
+          (vec (repeat 20 9998))
+          (vec (repeat 20 9999))
+          (vec (repeat 20 10000))
+          (vec (repeat 15 9))) 12 0] ; long vectors of edge-case integers
+   [(fn [] (fuel-cost-input (inc (lrand-int 5)))) 75 1000] ;random short vectors, length [1, 5]
+   [(fn [] (fuel-cost-input (+ 6 (lrand-int 15)))) 88 1000] ; random longer vectors, length [6, 20]
+   ])
 
-;;Can make Luhn test data like this:
-;(test-and-train-data-from-domains luhn-data-domains)
+;;Can make test data like this:
+;(test-and-train-data-from-domains data-domains)
 
-; Helper function to multiply digit by 2 and subtract 9 (if necessary)
-(defn luhn-formula
-  [num]
-  (if (>= (* num 2) 10)
-    (- (* num 2) 9)
-    (* num 2)))
-
-; Some code from here: https://stackoverflow.com/questions/36105612/map-a-function-on-every-two-elements-of-a-list
-(defn luhn-test-cases
+; Helper function for error function
+(defn test-cases
   "Takes a sequence of inputs and gives IO test cases of the form
-   [input output]."
+   [[input1 input2] output]."
   [inputs]
   (map (fn [in]
          (vector in
-                 (reduce + (map #(% %2) (cycle [luhn-formula identity]) in))))
+                 (apply + (map #(- (quot % 3)
+                                   2)
+                               in))))
        inputs))
 
-(defn make-luhn-error-function-from-cases
+(defn make-error-function-from-cases
+  "Creates and returns the error function based on the train/test cases."
   [train-cases test-cases]
-  (fn the-actual-luhn-error-function
+  (fn the-actual-error-function
     ([individual]
-     (the-actual-luhn-error-function individual :train))
+     (the-actual-error-function individual :train))
     ([individual data-cases] ;; data-cases should be :train or :test
-     (the-actual-luhn-error-function individual data-cases false))
+     (the-actual-error-function individual data-cases false))
     ([individual data-cases print-outputs]
      (let [behavior (atom '())
            errors (doall
@@ -94,44 +100,44 @@
                                                       (push-item input1 :input)))
                            result (top-item :integer final-state)]
                        (when print-outputs
-                         (println (format "Correct output: %s | Program output: %s" correct-output result)))
+                         (println (format "Correct output: %9d | Program output: %s" correct-output (str result))))
                          ; Record the behavior
                        (swap! behavior conj result)
-                         ; Error is difference of integers
+                         ; Error is integer difference
                        (if (number? result)
-                         (abs (- result correct-output)) ;distance from correct integer
-                         1000000) ;penalty for no return value
+                         (nt/abs (- result correct-output)) ; distance from correct integer
+                         max-number-magnitude) ; penalty for no return value
                        )))]
        (if (= data-cases :train)
          (assoc individual :behaviors @behavior :errors errors)
          (assoc individual :test-errors errors))))))
 
-(defn get-luhn-train-and-test
+(defn get-train-and-test
   "Returns the train and test cases."
   [data-domains]
-  (map luhn-test-cases
+  (map test-cases
        (test-and-train-data-from-domains data-domains)))
 
 ; Define train and test cases
-(def luhn-train-and-test-cases
-  (get-luhn-train-and-test luhn-data-domains))
+(def train-and-test-cases
+  (get-train-and-test data-domains))
 
-(defn luhn-initial-report
+(defn initial-report
   [argmap]
   (println "Train and test cases:")
-  (doseq [[i case] (map vector (range) (first luhn-train-and-test-cases))]
+  (doseq [[i case] (map vector (range) (first train-and-test-cases))]
     (println (format "Train Case: %3d | Input/Output: %s" i (str case))))
-  (doseq [[i case] (map vector (range) (second luhn-train-and-test-cases))]
+  (doseq [[i case] (map vector (range) (second train-and-test-cases))]
     (println (format "Test Case: %3d | Input/Output: %s" i (str case))))
   (println ";;******************************"))
 
-(defn luhn-report
+(defn custom-report
   "Custom generational report."
   [best population generation error-function report-simplifications]
   (let [best-test-errors (:test-errors (error-function best :test))
         best-total-test-error (apply +' best-test-errors)]
     (println ";;******************************")
-    (printf ";; -*- Luhn problem report - generation %s\n" generation) (flush)
+    (printf ";; -*- Find Pair problem report - generation %s\n" generation) (flush)
     (println "Test total error for best:" best-total-test-error)
     (println (format "Test mean error for best: %.5f" (double (/ best-total-test-error (count best-test-errors)))))
     (when (zero? (:total-error best))
@@ -149,24 +155,19 @@
 
 ; Define the argmap
 (def argmap
-  {:error-function (make-luhn-error-function-from-cases (first luhn-train-and-test-cases)
-                                                        (second luhn-train-and-test-cases))
-   :atom-generators luhn-atom-generators
+  {:error-function (make-error-function-from-cases (first train-and-test-cases)
+                                                   (second train-and-test-cases))
+   :atom-generators atom-generators
    :max-points 2000
    :max-genome-size-in-initial-program 250
    :evalpush-limit 2000
    :population-size 1000
    :max-generations 300
    :parent-selection :lexicase
-   :genetic-operator-probabilities {:alternation 0.2
-                                    :uniform-mutation 0.2
-                                    :uniform-close-mutation 0.1
-                                    [:alternation :uniform-mutation] 0.5}
-   :alternation-rate 0.01
-   :alignment-deviation 10
-   :uniform-mutation-rate 0.01
-   :problem-specific-report luhn-report
-   :problem-specific-initial-report luhn-initial-report
+   :genetic-operator-probabilities {:uniform-addition-and-deletion 1.0}
+   :uniform-addition-and-deletion-rate 0.09
+   :problem-specific-report custom-report
+   :problem-specific-initial-report initial-report
    :report-simplifications 0
    :final-report-simplifications 5000
-   :max-error 1000000})
+   :max-error max-number-magnitude})

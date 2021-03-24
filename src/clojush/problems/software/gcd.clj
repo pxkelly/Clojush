@@ -2,26 +2,24 @@
 ;; Peter Kelly, pxkelly@hamilton.edu
 ;;
 
-(ns clojush.problems.software.gcd
+(ns clojush.problems.software.benchmarks-v2.gcd
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag
-        [clojure.math numeric-tower]
-        ))
+        [clojure.math numeric-tower]))
 
 ; Atom generators
 (def gcd-atom-generators
-  (concat (list
-            ;;; end constants
-            ;;; end ERCs
-            (tag-instruction-erc [:integer :boolean :exec] 1000)
-            (tagged-instruction-erc 1000)
-            ;;; end tag ERCs
-            'in1
-            'in2
-            ;;; end input instructions
-            )
-          (registered-for-stacks [:boolean :integer :exec])))
+  (make-proportional-atom-generators
+   (concat
+    (registered-for-stacks [:integer :boolean :exec])
+    (list (tag-instruction-erc [:integer :boolean :exec] 1000) ; tags
+          (tagged-instruction-erc 1000)))
+   (list 'in1 'in2) ; inputs
+   (list (fn [] (- (lrand-int 21) 10)) ; integer ERC [-10, 10]
+) ; constants
+   {:proportion-inputs 0.15
+    :proportion-constants 0.05}))
 
 
 ;; Define test cases
@@ -42,7 +40,7 @@
           [4200 3528]
           [820000 63550]
           [123456 654321]) 6 0]
-   [(fn [] (gcd-input)) 194 2000] ;; Random length, random floats
+   [(fn [] (gcd-input)) 194 2000] ;; Random length, random integers
    ])
 
 ;;Can make GCD test data like this:
@@ -56,9 +54,9 @@
   [inputs]
   (map (fn [[in1 in2]]
          (vector [in1 in2]
-           (loop [a in1 b in2]
-             (if (zero? b) a
-             (recur b (mod a b))))))
+                 (loop [a in1 b in2]
+                   (if (zero? b) a
+                       (recur b (mod a b))))))
        inputs))
 
 (defn make-gcd-error-function-from-cases
@@ -72,22 +70,22 @@
      (let [behavior (atom '())
            errors (doall
                    (for [[[input1 input2] correct-output] (case data-cases
-                                                           :train train-cases
-                                                           :test test-cases
-                                                           [])]
+                                                            :train train-cases
+                                                            :test test-cases
+                                                            [])]
                      (let [final-state (run-push (:program individual)
                                                  (->> (make-push-state)
                                                       (push-item input1 :input)
                                                       (push-item input2 :input)))
                            result (top-item :integer final-state)]
                        (when print-outputs
-                          (println (format "Correct output: %s | Program output: %s" (str correct-output) (str result))))
+                         (println (format "Correct output: %s | Program output: %s" (str correct-output) (str result))))
                        ; Record the behavior
                        (swap! behavior conj result)
                        ; Error is integer difference
                        (if (number? result)
                          (abs (- result correct-output)) ; distance from correct integer
-                         10000000) ; penalty for no return value
+                         1000000) ; penalty for no return value
                        )))]
        (if (= data-cases :train)
          (assoc individual :behaviors @behavior :errors errors)
@@ -118,7 +116,7 @@
   (let [best-test-errors (:test-errors (error-function best :test))
         best-total-test-error (apply +' best-test-errors)]
     (println ";;******************************")
-    (printf ";; -*- GCD problem report - generation %s\n" generation)(flush)
+    (printf ";; -*- GCD problem report - generation %s\n" generation) (flush)
     (println "Test total error for best:" best-total-test-error)
     (println (format "Test mean error for best: %.5f" (double (/ best-total-test-error (count best-test-errors)))))
     (when (<= (:total-error best) 1.0E-3)
@@ -129,8 +127,7 @@
     (println ";;------------------------------")
     (println "Outputs of best individual on training cases:")
     (error-function best :train true)
-    (println ";;******************************")
-    )) ;; To do validation, could have this function return an altered best individual
+    (println ";;******************************"))) ;; To do validation, could have this function return an altered best individual
        ;; with total-error > 0 if it had error of zero on train but not on validation
        ;; set. Would need a third category of data cases, or a defined split of training cases.
 
@@ -138,19 +135,18 @@
 ; Define the argmap
 (def argmap
   {:error-function (make-gcd-error-function-from-cases (first gcd-train-and-test-cases)
-                                                                  (second gcd-train-and-test-cases))
+                                                       (second gcd-train-and-test-cases))
    :atom-generators gcd-atom-generators
-   :max-points 1600
-   :max-genome-size-in-initial-program 200
-   :evalpush-limit 4000
+   :max-points 2000
+   :max-genome-size-in-initial-program 250
+   :evalpush-limit 2000
    :population-size 1000
    :max-generations 300
    :parent-selection :lexicase
    :genetic-operator-probabilities {:alternation 0.2
                                     :uniform-mutation 0.2
                                     :uniform-close-mutation 0.1
-                                    [:alternation :uniform-mutation] 0.5
-                                    }
+                                    [:alternation :uniform-mutation] 0.5}
    :alternation-rate 0.01
    :alignment-deviation 10
    :uniform-mutation-rate 0.01
@@ -158,5 +154,4 @@
    :problem-specific-initial-report gcd-initial-report
    :report-simplifications 0
    :final-report-simplifications 5000
-   :max-error 10000000
-   })
+   :max-error 1000000})
