@@ -74,6 +74,7 @@
        inputs))
 
 (defn make-error-function-from-cases
+  "Creates and returns the error function based on the train/test cases."
   [train-cases test-cases]
   (fn the-actual-error-function
     ([individual]
