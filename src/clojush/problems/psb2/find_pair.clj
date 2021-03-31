@@ -106,7 +106,7 @@
    ])
 
 ; Helper function for error function
-(defn test-cases
+(defn create-test-cases
   "Takes a sequence of inputs and gives IO test cases of the form
    [[input1 input2] [output1 output2]]."
   [inputs]
@@ -163,7 +163,7 @@
 (defn get-train-and-test
   "Returns the train and test cases."
   [data-domains]
-  (map test-cases
+  (map create-test-cases
        (test-and-train-data-from-domains data-domains)))
 
 ; Define train and test cases

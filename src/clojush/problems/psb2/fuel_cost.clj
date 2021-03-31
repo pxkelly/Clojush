@@ -65,7 +65,7 @@
    ])
 
 ; Helper function for error function
-(defn test-cases
+(defn create-test-cases
   "Takes a sequence of inputs and gives IO test cases of the form
    [input output]."
   [inputs]
@@ -113,7 +113,7 @@
 (defn get-train-and-test
   "Returns the train and test cases."
   [data-domains]
-  (map test-cases
+  (map create-test-cases
        (test-and-train-data-from-domains data-domains)))
 
 ; Define train and test cases
@@ -146,7 +146,8 @@
     (println ";;------------------------------")
     (println "Outputs of best individual on training cases:")
     (error-function best :train true)
-    (println ";;******************************"))) ; To do validation, could have this function return an altered best individual
+    (println ";;******************************")
+    )) ; To do validation, could have this function return an altered best individual
        ; with total-error > 0 if it had error of zero on train but not on validation
        ; set. Would need a third category of data cases, or a defined split of training cases.
 
