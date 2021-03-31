@@ -1,56 +1,52 @@
 ;; gcd.clj
 ;; Peter Kelly, pxkelly@hamilton.edu
 ;;
+;; Problem inspired by: https://www.codewars.com/kata/5500d54c2ebe0a8e8a0003fd/python
 
-(ns clojush.problems.software.benchmarks-v2.gcd
+(ns clojush.problems.psb2.gcd
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag
         [clojure.math numeric-tower]))
 
 ; Atom generators
-(def gcd-atom-generators
+(def atom-generators
   (make-proportional-atom-generators
    (concat
-    (registered-for-stacks [:integer :boolean :exec])
+    (registered-for-stacks [:integer :boolean :exec]) ; stacks
     (list (tag-instruction-erc [:integer :boolean :exec] 1000) ; tags
           (tagged-instruction-erc 1000)))
    (list 'in1 'in2) ; inputs
-   (list (fn [] (- (lrand-int 21) 10)) ; integer ERC [-10, 10]
-) ; constants
+   (list (fn [] (- (lrand-int 21) 10))) ; integer ERC [-10, 10]
    {:proportion-inputs 0.15
     :proportion-constants 0.05}))
 
 
-;; Define test cases
+; Define test cases
 (defn gcd-input
-  "Makes a GCD input vector."
+  "Makes a GCD input vector, which is just two numbers from 1-1000000."
   []
   (vector (inc (rand-int 1000000)) (inc (rand-int 1000000))))
 
-;; A list of data domains for the problem. Each domain is a vector containing
-;; a "set" of inputs and two integers representing how many cases from the set
-;; should be used as training and testing cases respectively. Each "set" of
-;; inputs is either a list or a function that, when called, will create a
-;; random element of the set.
-(def gcd-data-domains
+; A list of data domains for the problem. Each domain is a vector containing
+; a "set" of inputs and two integers representing how many cases from the set
+; should be used as training and testing cases respectively. Each "set" of
+; inputs is either a list or a function that, when called, will create a
+; random element of the set.
+(def data-domains
   [[(list [1 1]
           [4 400000]
           [54 24]
           [4200 3528]
           [820000 63550]
-          [123456 654321]) 6 0]
-   [(fn [] (gcd-input)) 194 2000] ;; Random length, random integers
+          [123456 654321]) 6 0] ; "Special" inputs covering some base cases
+   [(fn [] (gcd-input)) 194 2000] ; Random length, random integers
    ])
 
-;;Can make GCD test data like this:
-;(test-and-train-data-from-domains gcd-data-domains)
-
 ; Helper function for error function
-; Code from math.numeric-tower
-(defn gcd-test-cases
+(defn create-test-cases
   "Takes a sequence of inputs and gives IO test cases of the form
-   [input output]."
+   [[input1 input2] output]."
   [inputs]
   (map (fn [[in1 in2]]
          (vector [in1 in2]
@@ -59,13 +55,13 @@
                        (recur b (mod a b))))))
        inputs))
 
-(defn make-gcd-error-function-from-cases
+(defn make-error-function-from-cases
   [train-cases test-cases]
-  (fn the-actual-gcd-error-function
+  (fn the-actual-error-function
     ([individual]
-     (the-actual-gcd-error-function individual :train))
-    ([individual data-cases] ;; data-cases should be :train or :test
-     (the-actual-gcd-error-function individual data-cases false))
+     (the-actual-error-function individual :train))
+    ([individual data-cases] ; data-cases should be :train or :test
+     (the-actual-error-function individual data-cases false))
     ([individual data-cases print-outputs]
      (let [behavior (atom '())
            errors (doall
@@ -93,26 +89,26 @@
                 :behaviors (reverse @behavior)
                 :errors errors))))))
 
-(defn get-gcd-train-and-test
+(defn get-train-and-test
   "Returns the train and test cases."
   [data-domains]
-  (map gcd-test-cases
+  (map create-test-cases
        (test-and-train-data-from-domains data-domains)))
 
 ; Define train and test cases
-(def gcd-train-and-test-cases
-  (get-gcd-train-and-test gcd-data-domains))
+(def train-and-test-cases
+  (get-train-and-test data-domains))
 
-(defn gcd-initial-report
+(defn initial-report
   [argmap]
   (println "Train and test cases:")
-  (doseq [[i case] (map vector (range) (first gcd-train-and-test-cases))]
+  (doseq [[i case] (map vector (range) (first train-and-test-cases))]
     (println (format "Train Case: %3s | Input/Output: %s" i (str case))))
-  (doseq [[i case] (map vector (range) (second gcd-train-and-test-cases))]
+  (doseq [[i case] (map vector (range) (second train-and-test-cases))]
     (println (format "Test Case: %3s | Input/Output: %s" i (str case))))
   (println ";;******************************"))
 
-(defn gcd-report
+(defn custom-report
   "Custom generational report."
   [best population generation error-function report-simplifications]
   (let [best-test-errors (:test-errors (error-function best :test))
@@ -129,17 +125,18 @@
     (println ";;------------------------------")
     (println "Outputs of best individual on training cases:")
     (error-function best :train true)
-    (println ";;******************************"))) ;; To do validation, could have this function return an altered best individual
-       ;; with total-error > 0 if it had error of zero on train but not on validation
-       ;; set. Would need a third category of data cases, or a defined split of training cases.
+    (println ";;******************************")
+    )) ; To do validation, could have this function return an altered best individual
+       ; with total-error > 0 if it had error of zero on train but not on validation
+       ; set. Would need a third category of data cases, or a defined split of training cases.
 
 
 ; Define the argmap
 (def argmap
-  {:error-function (make-gcd-error-function-from-cases (first gcd-train-and-test-cases)
-                                                       (second gcd-train-and-test-cases))
-   :training-cases (first gcd-train-and-test-cases)
-   :atom-generators gcd-atom-generators
+  {:error-function (make-error-function-from-cases (first train-and-test-cases)
+                                                       (second train-and-test-cases))
+   :training-cases (first train-and-test-cases)
+   :atom-generators atom-generators
    :max-points 2000
    :max-genome-size-in-initial-program 250
    :evalpush-limit 2000
@@ -153,8 +150,8 @@
    :alternation-rate 0.01
    :alignment-deviation 10
    :uniform-mutation-rate 0.01
-   :problem-specific-report gcd-report
-   :problem-specific-initial-report gcd-initial-report
+   :problem-specific-report custom-report
+   :problem-specific-initial-report initial-report
    :report-simplifications 0
    :final-report-simplifications 5000
    :max-error 1000000})

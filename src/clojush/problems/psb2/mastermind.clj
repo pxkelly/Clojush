@@ -1,8 +1,9 @@
 ;; mastermind.clj
 ;; Peter Kelly, pxkelly@hamilton.edu
 ;;
+;; Problem inspired by our 200-level program languages course
 
-(ns clojush.problems.software.benchmarks-v2.mastermind
+(ns clojush.problems.psb2.mastermind
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag
@@ -27,10 +28,10 @@
         (stack-assoc top-int :output 1 state)))))
 
 ; Atom generators
-(def mastermind-atom-generators
+(def atom-generators
   (make-proportional-atom-generators
    (concat
-    (registered-for-stacks [:integer :exec :boolean :string :char])
+    (registered-for-stacks [:integer :exec :boolean :string :char]) ; stacks
     (list (tag-instruction-erc [:integer :exec :boolean :string :char] 1000) ; tags
           (tagged-instruction-erc 1000)))
    (list 'in1 'in2) ; inputs
@@ -45,25 +46,25 @@
    {:proportion-inputs 0.15
     :proportion-constants 0.05}))
 
-;; Define test cases
 (defn mastermind-one-string
   "Makes a 4-char mastermind string"
   []
   (apply str (repeatedly 4
                          #(rand-nth "BRWYOG"))))
 
+; Define test cases
 (defn mastermind-input
-  "Makes a mastermind input."
+  "Makes a mastermind input, which is two 4-character strings made from the letters B, R,
+   W, Y, O, or G."
   []
   (vec (repeatedly 2 mastermind-one-string)))
 
-
-;; A list of data domains for the problem. Each domain is a vector containing
-;; a "set" of inputs and two integers representing how many cases from the set
-;; should be used as training and testing cases respectively. Each "set" of
-;; inputs is either a list or a function that, when called, will create a
-;; random element of the set.
-(def mastermind-data-domains
+; A list of data domains for the problem. Each domain is a vector containing
+; a "set" of inputs and two integers representing how many cases from the set
+; should be used as training and testing cases respectively. Each "set" of
+; inputs is either a list or a function that, when called, will create a
+; random element of the set.
+(def data-domains
   [[(list ["RRRR" "RRRR"]
           ["BOYG" "GYOB"]
           ["WYYW" "BBOG"]
@@ -83,13 +84,10 @@
           ["RBRB" "ORBY"]
           ["WORR" "BYOW"]
           ["YOWW" "YWWR"]
-          ["BRYB" "WOGG"]) 20 0]
+          ["BRYB" "WOGG"]) 20 0] ; "Special" inputs covering some base cases
    [(fn [] (let [s (mastermind-one-string)]
-             [s s])) 10 200] ; all the same
+             [s s])) 10 200] ; All the same string
    [(fn [] (mastermind-input)) 170 1800]])
-
-;;Can make mastermind test data like this:
-;(test-and-train-data-from-domains mastermind-data-domains)
 
 (defn remove-matches
   [code guess]
@@ -101,9 +99,9 @@
       :else (recur (subs check-code 1) (subs check-guess 1) (str matchless-code (first check-code)) (str matchless-guess (first check-guess))))))
 
 ; Helper function for error function
-(defn mastermind-test-cases
+(defn create-test-cases
   "Takes a sequence of inputs and gives IO test cases of the form
-   [input output]."
+   [[input1 input2] [output1 output2]]."
   [inputs]
   (map (fn [[in1 in2]]
          (vector [in1 in2]
@@ -114,13 +112,13 @@
                    (vector white-pegs (- 4 (count matchless-code))))))
        inputs))
 
-(defn make-mastermind-error-function-from-cases
+(defn make-error-function-from-cases
   [train-cases test-cases]
-  (fn the-actual-mastermind-error-function
+  (fn the-actual-error-function
     ([individual]
-     (the-actual-mastermind-error-function individual :train))
-    ([individual data-cases] ;; data-cases should be :train or :test
-     (the-actual-mastermind-error-function individual data-cases false))
+     (the-actual-error-function individual :train))
+    ([individual data-cases] ; data-cases should be :train or :test
+     (the-actual-error-function individual data-cases false))
     ([individual data-cases print-outputs]
      (let [behavior (atom '())
            errors (flatten
@@ -143,14 +141,14 @@
                                            (str result1) (str result2))))
                          ; Record the behavior
                         (swap! behavior conj result1 result2)
-                         ; Error is integer distance
+                         ; Error is integer distance for both outputs
                         (vector
                          (if (number? result1)
-                           (abs (- result1 correct-output1)) ;distance from correct integer
-                           1000000) ;penalty for no return value
+                           (abs (- result1 correct-output1)) ; distance from correct integer
+                           1000000) ; penalty for no return value
                          (if (number? result2)
-                           (abs (- result2 correct-output2)) ;distance from correct integer
-                           1000000) ;penalty for no return value
+                           (abs (- result2 correct-output2)) ; distance from correct integer
+                           1000000) ; penalty for no return value
                          )))))]
        (if (= data-cases :test)
          (assoc individual :test-errors errors)
@@ -158,26 +156,26 @@
                 :behaviors (reverse @behavior)
                 :errors errors))))))
 
-(defn get-mastermind-train-and-test
+(defn get-train-and-test
   "Returns the train and test cases."
   [data-domains]
-  (map sort (map mastermind-test-cases
+  (map sort (map create-test-cases
                  (test-and-train-data-from-domains data-domains))))
 
 ; Define train and test cases
-(def mastermind-train-and-test-cases
-  (get-mastermind-train-and-test mastermind-data-domains))
+(def train-and-test-cases
+  (get-train-and-test data-domains))
 
-(defn mastermind-initial-report
+(defn initial-report
   [argmap]
   (println "Train and test cases:")
-  (doseq [[i case] (map vector (range) (first mastermind-train-and-test-cases))]
+  (doseq [[i case] (map vector (range) (first train-and-test-cases))]
     (println (format "Train Case: %3d | Input/Output: %s" i (str case))))
-  (doseq [[i case] (map vector (range) (second mastermind-train-and-test-cases))]
+  (doseq [[i case] (map vector (range) (second train-and-test-cases))]
     (println (format "Test Case: %3d | Input/Output: %s" i (str case))))
   (println ";;******************************"))
 
-(defn mastermind-report
+(defn custom-report
   "Custom generational report."
   [best population generation error-function report-simplifications]
   (let [best-test-errors (:test-errors (error-function best :test))
@@ -194,17 +192,18 @@
     (println ";;------------------------------")
     (println "Outputs of best individual on training cases:")
     (error-function best :train true)
-    (println ";;******************************"))) ;; To do validation, could have this function return an altered best individual
-       ;; with total-error > 0 if it had error of zero on train but not on validation
-       ;; set. Would need a third category of data cases, or a defined split of training cases.
+    (println ";;******************************")
+    )) ; To do validation, could have this function return an altered best individual
+       ; with total-error > 0 if it had error of zero on train but not on validation
+       ; set. Would need a third category of data cases, or a defined split of training cases.
 
 
 ; Define the argmap
 (def argmap
-  {:error-function (make-mastermind-error-function-from-cases (first mastermind-train-and-test-cases)
-                                                              (second mastermind-train-and-test-cases))
-   :training-cases (first mastermind-train-and-test-cases)
-   :atom-generators mastermind-atom-generators
+  {:error-function (make-error-function-from-cases (first train-and-test-cases)
+                                                              (second train-and-test-cases))
+   :training-cases (first train-and-test-cases)
+   :atom-generators atom-generators
    :max-points 2000
    :max-genome-size-in-initial-program 250
    :evalpush-limit 2000
@@ -218,8 +217,8 @@
    :alternation-rate 0.01
    :alignment-deviation 10
    :uniform-mutation-rate 0.01
-   :problem-specific-report mastermind-report
-   :problem-specific-initial-report mastermind-initial-report
+   :problem-specific-report custom-report
+   :problem-specific-initial-report initial-report
    :report-simplifications 0
    :final-report-simplifications 5000
    :max-error 1000000})

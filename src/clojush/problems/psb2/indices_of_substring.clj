@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by https://www.codewars.com/kata/56b78faebd06e61870001191
 
-(ns clojush.problems.software.benchmarks-v2.indices-of-substring
+(ns clojush.problems.psb2.indices-of-substring
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag)
@@ -13,7 +13,7 @@
 (def atom-generators
   (make-proportional-atom-generators
    (concat
-    (registered-for-stacks [:vector_integer :string :char :integer :boolean :exec])
+    (registered-for-stacks [:vector_integer :string :char :integer :boolean :exec]) ; stacks
     (list (tag-instruction-erc [:vector_integer :string :char :integer :boolean :exec] 1000) ; tags
           (tagged-instruction-erc 1000)))
    (list 'in1 'in2) ; inputs
@@ -48,11 +48,11 @@
         text (text-from-target len target)]
     [text target]))
 
-;; A list of data domains. Each domain is a vector containing
-;; a "set" of inputs and two integers representing how many cases from the set
-;; should be used as training and testing cases respectively. Each "set" of
-;; inputs is either a list or a function that, when called, will create a
-;; random element of the set.
+; A list of data domains. Each domain is a vector containing
+; a "set" of inputs and two integers representing how many cases from the set
+; should be used as training and testing cases respectively. Each "set" of
+; inputs is either a list or a function that, when called, will create a
+; random element of the set.
 (def data-domains
   [[(list
      ["a" "5"]
@@ -62,7 +62,7 @@
      ["############" "#"]
      ["GGGGGGGGGGGGGGGGGGGG" "G"]
      ["$$$$$$$$$$$$$$$$$$$$" "$$"]
-     ["33333333333333333333" "333"] ; these are important for overlap
+     ["33333333333333333333" "333"] ; These are important for overlap
      ["hahahahahahahahahaha" "haha"]
      ["GCTGCTGCTGCTGCTGCTGC" "GCTGC"]
      ["bbbbbbb(bb#bbbbbbbb" "bbb"]
@@ -76,12 +76,9 @@
      ["a few ending <3<3<3" "<3"]
      ["middle of this one" "of"])
     20 0]
-   [(fn [] (substring-indices-input (inc (lrand-int 10)))) 40 500] ; A smaller number of shorter inputs
-   [(fn [] (substring-indices-input (+ 11 (lrand-int 10)))) 140 500] ; A larger number of longer inputs
+   [(fn [] (substring-indices-input (inc (lrand-int 10)))) 40 1000] ; A smaller number of shorter inputs
+   [(fn [] (substring-indices-input (+ 11 (lrand-int 10)))) 140 1000] ; A larger number of longer inputs
    ])
-
-;;Can make test data like this:
-(comment (test-and-train-data-from-domains data-domains))
 
 (defn solve-substring-indices
   "Solves the problem given the input."
@@ -92,7 +89,7 @@
                (range (count text)))))
 
 ; Helper function for error function
-(defn test-cases
+(defn create-test-cases
   "Takes a sequence of inputs and gives IO test cases of the form
    [[input1 input2] output]."
   [inputs]
@@ -107,7 +104,7 @@
   (fn the-actual-error-function
     ([individual]
      (the-actual-error-function individual :train))
-    ([individual data-cases] ;; data-cases should be :train or :test
+    ([individual data-cases] ; data-cases should be :train or :test
      (the-actual-error-function individual data-cases false))
     ([individual data-cases print-outputs]
      (let [behavior (atom '())
@@ -139,7 +136,7 @@
 (defn get-train-and-test
   "Returns the train and test cases."
   [data-domains]
-  (map test-cases
+  (map create-test-cases
        (test-and-train-data-from-domains data-domains)))
 
 ; Define train and test cases
@@ -172,9 +169,10 @@
     (println ";;------------------------------")
     (println "Outputs of best individual on training cases:")
     (error-function best :train true)
-    (println ";;******************************"))) ;; To do validation, could have this function return an altered best individual
-       ;; with total-error > 0 if it had error of zero on train but not on validation
-       ;; set. Would need a third category of data cases, or a defined split of training cases.
+    (println ";;******************************")
+    )) ; To do validation, could have this function return an altered best individual
+       ; with total-error > 0 if it had error of zero on train but not on validation
+       ; set. Would need a third category of data cases, or a defined split of training cases.
 
 
 ; Define the argmap
