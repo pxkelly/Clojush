@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://adventofcode.com/2015/day/1
 
-(ns clojush.problems.PSB2.basement
+(ns clojush.problems.psb2.basement
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag)

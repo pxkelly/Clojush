@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://adventofcode.com/2020/day/1
 
-(ns clojush.problems.software.benchmarks-v2.find-pair
+(ns clojush.problems.psb2.find-pair
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag)

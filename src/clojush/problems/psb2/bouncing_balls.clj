@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://www.codewars.com/kata/5544c7a5cb454edb3c000047
 
-(ns clojush.problems.PSB2.bouncing-balls
+(ns clojush.problems.psb2.bouncing-balls
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag

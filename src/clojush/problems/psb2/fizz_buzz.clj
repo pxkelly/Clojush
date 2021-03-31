@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://www.codewars.com/kata/5300901726d12b80e8000498
 
-(ns clojush.problems.software.benchmarks-v2.fizz-buzz
+(ns clojush.problems.psb2.fizz-buzz
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag

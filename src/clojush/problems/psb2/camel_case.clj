@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://www.codewars.com/kata/517abf86da9663f1d2000003
 
-(ns clojush.problems.software.PSB2.camel-case
+(ns clojush.problems.psb2.camel-case
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag

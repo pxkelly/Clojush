@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://adventofcode.com/2019/day/1
 
-(ns clojush.problems.software.benchmarks-v2.fuel-cost
+(ns clojush.problems.psb2.fuel-cost
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag)

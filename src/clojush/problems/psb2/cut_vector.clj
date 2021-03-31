@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://www.codewars.com/kata/5719b28964a584476500057d
 
-(ns clojush.problems.software.benchmarks-v2.cut-vector
+(ns clojush.problems.psb2.cut-vector
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag

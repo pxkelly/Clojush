@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://projecteuler.net/problem=31
 
-(ns clojush.problems.software.PSB2.coin-sums
+(ns clojush.problems.psb2.coin-sums
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag

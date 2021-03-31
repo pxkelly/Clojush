@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://projecteuler.net/problem=205
 
-(ns clojush.problems.software.benchmarks-v2.dice-game
+(ns clojush.problems.psb2.dice-game
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag

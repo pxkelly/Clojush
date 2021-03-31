@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://www.codewars.com/kata/5531abe4855bcc8d1f00004c/javascript
 
-(ns clojush.problems.software.PSB2.bowling
+(ns clojush.problems.psb2.bowling
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag
