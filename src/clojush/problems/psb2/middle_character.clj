@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://www.codewars.com/kata/56747fd5cb988479af000028
 
-(ns clojush.problems.software.benchmarks-v2.middle-character
+(ns clojush.problems.psb2.middle-character
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag)
@@ -13,32 +13,32 @@
 (def atom-generators
   (make-proportional-atom-generators
    (concat
-    (registered-for-stacks [:string :char :integer :boolean :exec])
+    (registered-for-stacks [:string :char :integer :boolean :exec]) ; stacks
     (list (tag-instruction-erc [:string :char :integer :boolean :exec] 1000) ; tags
           (tagged-instruction-erc 1000)))
    (list 'in1) ; inputs
    (list 0
          1
          2
-         (fn [] (- (lrand-int 201) 100)) ;Integer ERC
-         "") ; constants
+         "" ; constants
+         (fn [] (- (lrand-int 201) 100))) ;Integer ERC 
    {:proportion-inputs 0.15
     :proportion-constants 0.05}))
 
 (def middle-character-chars (map char (range 32 127)))
 
 (defn middle-character-input
-  "Creates a string of length len."
+  "Creates a string of length len only using the middle-character-chars."
   [len]
   (apply str
          (repeatedly len
                      #(lrand-nth middle-character-chars))))
 
-;; A list of data domains. Each domain is a vector containing
-;; a "set" of inputs and two integers representing how many cases from the set
-;; should be used as training and testing cases respectively. Each "set" of
-;; inputs is either a list or a function that, when called, will create a
-;; random element of the set.
+; A list of data domains. Each domain is a vector containing
+; a "set" of inputs and two integers representing how many cases from the set
+; should be used as training and testing cases respectively. Each "set" of
+; inputs is either a list or a function that, when called, will create a
+; random element of the set.
 (def data-domains
   [[(list "Q"
           " "
@@ -54,8 +54,8 @@
           "      "
           "hi  ~1"
           "  hi~1"
-          "hi~1  ") 15 0] ; fixed strings
-   [(fn [] (middle-character-input (inc (lrand-int 100)))) 185 2000] ; random strings, length [1, 100]
+          "hi~1  ") 15 0] ; Fixed strings
+   [(fn [] (middle-character-input (inc (lrand-int 100)))) 185 2000] ; Random strings, length [1, 100]
    ])
 
 (defn solve-middle-character
@@ -69,9 +69,9 @@
         (str (nth input middle))))))
 
 ; Helper function for error function
-(defn test-cases
+(defn create-test-cases
   "Takes a sequence of inputs and gives IO test cases of the form
-   [[input1 input2] output]."
+   [input output]."
   [inputs]
   (map (fn [in]
          (vector in
@@ -84,7 +84,7 @@
   (fn the-actual-error-function
     ([individual]
      (the-actual-error-function individual :train))
-    ([individual data-cases] ;; data-cases should be :train or :test
+    ([individual data-cases] ; data-cases should be :train or :test
      (the-actual-error-function individual data-cases false))
     ([individual data-cases print-outputs]
      (let [behavior (atom '())
@@ -115,7 +115,7 @@
 (defn get-train-and-test
   "Returns the train and test cases."
   [data-domains]
-  (map test-cases
+  (map create-test-cases
        (test-and-train-data-from-domains data-domains)))
 
 ; Define train and test cases
@@ -148,9 +148,10 @@
     (println ";;------------------------------")
     (println "Outputs of best individual on training cases:")
     (error-function best :train true)
-    (println ";;******************************"))) ;; To do validation, could have this function return an altered best individual
-       ;; with total-error > 0 if it had error of zero on train but not on validation
-       ;; set. Would need a third category of data cases, or a defined split of training cases.
+    (println ";;******************************")
+    )) ; To do validation, could have this function return an altered best individual
+       ; with total-error > 0 if it had error of zero on train but not on validation
+       ; set. Would need a third category of data cases, or a defined split of training cases.
 
 
 ; Define the argmap

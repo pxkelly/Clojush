@@ -1,6 +1,7 @@
 ;; snow_day.clj
 ;; Peter Kelly, pxkelly@hamilton.edu
 ;;
+;; Problem inspired by our introductory level program languages course
 
 (ns clojush.problems.software.benchmarks-v2.snow-day
   (:use clojush.pushgp.pushgp
@@ -9,16 +10,13 @@
         [clojure.math numeric-tower]))
 
 ; Atom generators
-(def snow-day-atom-generators
+(def atom-generators
   (make-proportional-atom-generators
    (concat
     (registered-for-stacks [:integer :float :boolean :exec])
     (list (tag-instruction-erc [:integer :float :boolean :exec] 1000) ; tags
           (tagged-instruction-erc 1000)))
-   (list 'in1
-         'in2
-         'in3
-         'in4) ; inputs
+   (list 'in1 'in2 'in3 'in4) ; inputs
    (list 0
          0.0
          1
@@ -28,17 +26,16 @@
    {:proportion-inputs 0.15
     :proportion-constants 0.05}))
 
-
-;; A list of data domains for the problem. Each domain is a vector containing
-;; a "set" of inputs and two integers representing how many cases from the set
-;; should be used as training and testing cases respectively. Each "set" of
-;; inputs is either a list or a function that, when called, will create a
-;; random element of the set.
-(def snow-day-data-domains
-  [[(list [0 0.0 0.0 0.0]   ; min size
-          [15 15.0 15.0 0.15]   ; same number
-          [20 19.99 9.999 0.999]    ; max size
-          [20 19.99 9.999 0.0]    ; max snow
+; A list of data domains for the problem. Each domain is a vector containing
+; a "set" of inputs and two integers representing how many cases from the set
+; should be used as training and testing cases respectively. Each "set" of
+; inputs is either a list or a function that, when called, will create a
+; random element of the set.
+(def data-domains
+  [[(list [0 0.0 0.0 0.0] ; Min size
+          [15 15.0 15.0 0.15] ; Same number
+          [20 19.99 9.999 0.999] ; Max size
+          [20 19.99 9.999 0.0] ; Max snow
           [10 0.0 1.0 0.0]
           [8 10.0 2.0 0.0]
           [13 0.0 0.0 0.0]
@@ -50,11 +47,8 @@
    [(fn [] (vector (rand-int 21) (rand 20) (rand 10) (rand))) 188 2000] ; Random cases
    ])
 
-;;Can make Snow Day test data like this:
-; (map sort (test-and-train-data-from-domains snow-day-data-domains))
-
-
-(defn snow-day-test-cases
+; Helper function for error function
+(defn create-test-cases
   "Takes a sequence of inputs and gives IO test cases of the form
    [[input1 input2 input3 input4] output]."
   [inputs]
@@ -68,13 +62,14 @@
                               (nth % 2))))))
        inputs))
 
-(defn make-snow-day-error-function-from-cases
+(defn make-error-function-from-cases
+  "Creates and returns the error function based on the train/test cases."
   [train-cases test-cases]
-  (fn the-actual-snow-day-error-function
+  (fn the-actual-error-function
     ([individual]
-     (the-actual-snow-day-error-function individual :train))
-    ([individual data-cases] ;; data-cases should be :train or :test
-     (the-actual-snow-day-error-function individual data-cases false))
+     (the-actual-error-function individual :train))
+    ([individual data-cases] ; data-cases should be :train or :test
+     (the-actual-error-function individual data-cases false))
     ([individual data-cases print-outputs]
      (let [behavior (atom '())
            errors (doall
@@ -108,26 +103,26 @@
                 :behaviors (reverse @behavior)
                 :errors errors))))))
 
-(defn get-snow-day-train-and-test
+(defn get-train-and-test
   "Returns the train and test cases."
   [data-domains]
-  (map snow-day-test-cases
+  (map create-test-cases
        (test-and-train-data-from-domains data-domains)))
 
 ; Define train and test cases
-(def snow-day-train-and-test-cases
-  (get-snow-day-train-and-test snow-day-data-domains))
+(def train-and-test-cases
+  (get-train-and-test data-domains))
 
-(defn snow-day-initial-report
+(defn initial-report
   [argmap]
   (println "Train and test cases:")
-  (doseq [[i case] (map vector (range) (first snow-day-train-and-test-cases))]
+  (doseq [[i case] (map vector (range) (first train-and-test-cases))]
     (println (format "Train Case: %3d | Input/Output: %s" i (str case))))
-  (doseq [[i case] (map vector (range) (second snow-day-train-and-test-cases))]
+  (doseq [[i case] (map vector (range) (second train-and-test-cases))]
     (println (format "Test Case: %3d | Input/Output: %s" i (str case))))
   (println ";;******************************"))
 
-(defn snow-day-report
+(defn custom-report
   "Custom generational report."
   [best population generation error-function report-simplifications]
   (let [best-test-errors (:test-errors (error-function best :test))
@@ -144,17 +139,18 @@
     (println ";;------------------------------")
     (println "Outputs of best individual on training cases:")
     (error-function best :train true)
-    (println ";;******************************"))) ;; To do validation, could have this function return an altered best individual
-       ;; with total-error > 0 if it had error of zero on train but not on validation
-       ;; set. Would need a third category of data cases, or a defined split of training cases.
+    (println ";;******************************")
+    )) ; To do validation, could have this function return an altered best individual
+       ; with total-error > 0 if it had error of zero on train but not on validation
+       ; set. Would need a third category of data cases, or a defined split of training cases.
 
 
 ; Define the argmap
 (def argmap
-  {:error-function (make-snow-day-error-function-from-cases (first snow-day-train-and-test-cases)
-                                                            (second snow-day-train-and-test-cases))
-   :training-cases (first snow-day-train-and-test-cases)
-   :atom-generators snow-day-atom-generators
+  {:error-function (make-error-function-from-cases (first train-and-test-cases)
+                                                            (second train-and-test-cases))
+   :training-cases (first train-and-test-cases)
+   :atom-generators atom-generators
    :max-points 2000
    :max-genome-size-in-initial-program 250
    :evalpush-limit 2000
@@ -168,8 +164,8 @@
    :alternation-rate 0.01
    :alignment-deviation 10
    :uniform-mutation-rate 0.01
-   :problem-specific-report snow-day-report
-   :problem-specific-initial-report snow-day-initial-report
+   :problem-specific-report custom-report
+   :problem-specific-initial-report initial-report
    :report-simplifications 0
    :final-report-simplifications 5000
    :max-error 1000000.0})

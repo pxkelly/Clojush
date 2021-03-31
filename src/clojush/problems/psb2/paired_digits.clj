@@ -3,7 +3,7 @@
 ;;
 ;; Problem inspired by: https://adventofcode.com/2017/day/1
 
-(ns clojush.problems.software.benchmarks-v2.paired-digits
+(ns clojush.problems.psb2.paired-digits
   (:use clojush.pushgp.pushgp
         [clojush pushstate interpreter random util globals]
         clojush.instructions.tag)
@@ -13,14 +13,13 @@
 (def atom-generators
   (make-proportional-atom-generators
    (concat
-    (registered-for-stacks [:string :char :integer :boolean :exec])
+    (registered-for-stacks [:string :char :integer :boolean :exec]) ; stacks
     (list (tag-instruction-erc [:string :char :integer :boolean :exec] 1000) ; tags
           (tagged-instruction-erc 1000)))
    (list 'in1) ; inputs
-   (list 0
-         (fn [] (lrand-nth "0123456789")) ;Char digit ERC
-         (fn [] (lrand-int 10)) ;Integer ERC
-) ; constants
+   (list 0 ; constants
+         (fn [] (lrand-nth "0123456789")) ; char digit ERC
+         (fn [] (lrand-int 10))) ; integer ERC
    {:proportion-inputs 0.15
     :proportion-constants 0.05}))
 
@@ -39,11 +38,11 @@
         (< (lrand) repeat-probability) (recur (str string (last string))) ; repeat last digit
         :else (recur (str string (lrand-nth digits)))))))
 
-;; A list of data domains. Each domain is a vector containing
-;; a "set" of inputs and two integers representing how many cases from the set
-;; should be used as training and testing cases respectively. Each "set" of
-;; inputs is either a list or a function that, when called, will create a
-;; random element of the set.
+; A list of data domains. Each domain is a vector containing
+; a "set" of inputs and two integers representing how many cases from the set
+; should be used as training and testing cases respectively. Each "set" of
+; inputs is either a list or a function that, when called, will create a
+; random element of the set.
 (def data-domains
   [[(list "99"
           "88"
@@ -59,7 +58,7 @@
           "32"
           "05"
           "64"
-          "42") 15 0] ; length-2 fixed strings
+          "42") 15 0] ; Length-2 fixed strings
    [(list "999"
           "555"
           "111"
@@ -74,7 +73,7 @@
           "841"
           "808"
           "454"
-          "295") 15 0] ; length-3 fixed strings
+          "295") 15 0] ; Length-3 fixed strings
    [(list "99999999999999999999"
           "88888888885555555555"
           "85858585858585858585"
@@ -84,12 +83,9 @@
           "11111888882222266666"
           "91181171161151141131"
           "77777377777377777377"
-          "09876543210987654321") 10 0] ; length-20 fixed strings
-   [(fn [] (paired-digits-input (+ 2 (lrand-int 19)))) 160 2000] ; random strings, length [2, 20]
+          "09876543210987654321") 10 0] ; Length-20 fixed strings
+   [(fn [] (paired-digits-input (+ 2 (lrand-int 19)))) 160 2000] ; Random strings, length [2, 20]
    ])
-
-;;Can make test data like this:
-(comment (test-and-train-data-from-domains data-domains))
 
 (defn get-digits
   "Returns a list of digits of the string"
@@ -110,9 +106,9 @@
                 (rest digs)))))
 
 ; Helper function for error function
-(defn test-cases
+(defn create-test-cases
   "Takes a sequence of inputs and gives IO test cases of the form
-   [[input1 input2] output]."
+   [input output]."
   [inputs]
   (map (fn [in]
          (vector in
@@ -125,7 +121,7 @@
   (fn the-actual-error-function
     ([individual]
      (the-actual-error-function individual :train))
-    ([individual data-cases] ;; data-cases should be :train or :test
+    ([individual data-cases] ; data-cases should be :train or :test
      (the-actual-error-function individual data-cases false))
     ([individual data-cases print-outputs]
      (let [behavior (atom '())
@@ -156,7 +152,7 @@
 (defn get-train-and-test
   "Returns the train and test cases."
   [data-domains]
-  (map test-cases
+  (map create-test-cases
        (test-and-train-data-from-domains data-domains)))
 
 ; Define train and test cases
@@ -189,9 +185,10 @@
     (println ";;------------------------------")
     (println "Outputs of best individual on training cases:")
     (error-function best :train true)
-    (println ";;******************************"))) ;; To do validation, could have this function return an altered best individual
-       ;; with total-error > 0 if it had error of zero on train but not on validation
-       ;; set. Would need a third category of data cases, or a defined split of training cases.
+    (println ";;******************************")
+    )) ; To do validation, could have this function return an altered best individual
+       ; with total-error > 0 if it had error of zero on train but not on validation
+       ; set. Would need a third category of data cases, or a defined split of training cases.
 
 
 ; Define the argmap
