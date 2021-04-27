@@ -52,8 +52,23 @@
      [0 0 2 0 0 0 4 0 0 0 0 0 1 0 0 0]
      [0 5 0 5 0 5 0 5 0 5 0 5 0 5 0 5]
      [9 9 8 7 6 6 7 8 9 9 8 7 6 5 5 6]
-     [0 0 0 0 0 7 0 0 0 3 0 0 0 0 0 0]) 20 0] ; "Special" inputs covering some base cases
-   [(fn [] (vec (repeatedly 16 #(rand-int 10)))) 180 2000]])
+     [0 0 0 0 0 7 0 0 0 3 0 0 0 0 0 0]
+     [1 2 3 4 5 6 7 8 9 0 3 1 6 8 5 8] ; This and the next 2 cases will pass the Luhn test
+     [8 3 6 7 5 9 1 8 3 4 2 6 7 5 9 1]
+     [2 6 5 9 1 8 3 5 1 3 2 0 6 7 9 1]
+     [9 4 7 9 2 1 3 4 4 3 1 0 1 3 4 3] ; This and the next case fail the Luhn test by 1
+     [8 3 2 9 5 9 8 3 1 7 3 4 0 6 8 6]
+     [0 1 0 2 0 3 0 4 0 5 0 6 0 7 0 8] ; All remaining edge cases focus on testing the "every other" aspect
+     [1 0 2 0 3 0 4 0 5 0 6 0 7 0 8 0]
+     [0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1] ; 1 is the smallest (non zero) digit
+     [1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0]
+     [0 9 0 9 0 9 0 9 0 9 0 9 0 9 0 9] ; 9 is the largest digit
+     [9 0 9 0 9 0 9 0 9 0 9 0 9 0 9 0]
+     [0 4 0 4 0 4 0 4 0 4 0 4 0 4 0 4] ; 4 is special, as it's the highest before you subtract 9
+     [4 0 4 0 4 0 4 0 4 0 4 0 4 0 4 0]
+     [0 5 0 5 0 5 0 5 0 5 0 5 0 5 0 5] ; This makes 5 equally special 
+     [5 0 5 0 5 0 5 0 5 0 5 0 5 0 5 0]) 35 0] ; "Special" inputs covering some base cases
+   [(fn [] (vec (repeatedly 16 #(rand-int 10)))) 165 2000]])
 
 
 ; Helper function to multiply digit by 2 and subtract 9 (if necessary)

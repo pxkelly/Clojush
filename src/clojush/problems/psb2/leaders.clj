@@ -66,28 +66,29 @@
      (the-actual-error-function individual data-cases false))
     ([individual data-cases print-outputs]
      (let [behavior (atom '())
-           errors (doall
-                   (for [[input correct-output] (case data-cases
-                                                  :train train-cases
-                                                  :test test-cases
-                                                  data-cases)]
-                     (let [final-state (run-push (:program individual)
-                                                 (->> (make-push-state)
-                                                      (push-item input :input)))
-                           result (top-item :vector_integer final-state)]
-                       (when print-outputs
-                         (println (format "Correct output: %2s | Program output: %s" (str correct-output) (str result))))
+           errors (flatten
+                   (doall
+                    (for [[input correct-output] (case data-cases
+                                                   :train train-cases
+                                                   :test test-cases
+                                                   data-cases)]
+                      (let [final-state (run-push (:program individual)
+                                                  (->> (make-push-state)
+                                                       (push-item input :input)))
+                            result (top-item :vector_integer final-state)]
+                        (when print-outputs
+                          (println (format "Correct output: %2s | Program output: %s" (str correct-output) (str result))))
                          ; Record the behavior
-                       (swap! behavior conj result)
-                         ; Error is integer error at each position in the vectors, with additional penalties for incorrect size vector
-                       (if (vector? result)
-                         (+' (apply +' (map (fn [cor res]
-                                              (abs (- cor res)))
-                                            correct-output
-                                            result))
-                             (*' 1000 (abs (- (count correct-output) (count result))))) ; penalty of 1000 times difference in sizes of vectors
-                         1000000) ; penalty for no return value
-                       )))]
+                        (swap! behavior conj result)
+                         ; Errors are integer error at each position in the vectors, and difference in vector size
+                        (if (vector? result)
+                          (vector (apply +' (map (fn [cor res]
+                                                   (abs (- cor res)))
+                                                 correct-output
+                                                 result))
+                                  (*' 1000 (abs (- (count correct-output) (count result))))) ; penalty of 1000 times difference in sizes of vectors
+                          (vector 1000000 1000000)) ; penalty for no return value
+                       ))))]
        (if (= data-cases :test)
          (assoc individual :test-errors errors)
          (assoc individual

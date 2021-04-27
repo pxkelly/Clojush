@@ -113,19 +113,19 @@
                        ; Error is integer error at each position in the vectors, with additional penalties for incorrect size vector
                  (vector
                   (if (vector? result1)
-                    (+' (apply +' (map (fn [cor res]
-                                         (abs (- cor res)))
-                                       correct-output1
-                                       result1))
-                        (*' 10000 (abs (- (count correct-output1) (count result1))))) ; penalty of 10000 times difference in sizes of vectors
-                    1000000) ; penalty for no return value
+                    (vector (apply +' (map (fn [cor res]
+                                             (abs (- cor res)))
+                                           correct-output1
+                                           result1))
+                            (*' 1000 (abs (- (count correct-output1) (count result1))))) ; penalty of 1000 times difference in sizes of vectors
+                    (vector 1000000 1000000)) ; penalty for no return value
                   (if (vector? result2)
-                    (+' (apply +' (map (fn [cor res]
-                                         (abs (- cor res)))
-                                       correct-output2
-                                       result2))
-                        (*' 10000 (abs (- (count correct-output2) (count result2))))) ; penalty of 10000 times difference in sizes of vectors
-                    1000000) ; penalty for no return value
+                    (vector (apply +' (map (fn [cor res]
+                                             (abs (- cor res)))
+                                           correct-output2
+                                           result2))
+                            (*' 1000 (abs (- (count correct-output2) (count result2))))) ; penalty of 1000 times difference in sizes of vectors
+                    (vector 1000000 1000000)) ; penalty for no return value
                   )))))]
        (if (= data-cases :test)
          (assoc individual :test-errors errors)
